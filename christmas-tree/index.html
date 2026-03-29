@@ -3,281 +3,384 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎄 Merry Christmas</title>
+  <title>🎄 3D Christmas Tree</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #0a0a1a;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      background: radial-gradient(ellipse at bottom, #0d1b2a 0%, #000005 100%);
       overflow: hidden;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Georgia', serif;
     }
-    h1 {
-      color: #f0c040;
-      font-size: 2.2rem;
-      text-align: center;
-      margin-bottom: 20px;
-      text-shadow: 0 0 20px #f0c040, 0 0 40px #ff6b00;
-      animation: glow 2s ease-in-out infinite alternate;
-      letter-spacing: 2px;
-    }
-    @keyframes glow {
-      from { text-shadow: 0 0 20px #f0c040, 0 0 40px #ff6b00; }
-      to   { text-shadow: 0 0 30px #ffdd70, 0 0 60px #ff9500, 0 0 80px #ff6b00; }
-    }
-    .tree-container {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .tree {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .star {
-      width: 50px; height: 50px;
-      background: radial-gradient(circle, #fff700 0%, #ffb300 60%, transparent 100%);
-      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-      animation: starPulse 1.5s ease-in-out infinite;
-      margin-bottom: -10px;
-      filter: drop-shadow(0 0 10px #ffb300);
-    }
-    @keyframes starPulse {
-      0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 10px #ffb300); }
-      50% { transform: scale(1.2) rotate(10deg); filter: drop-shadow(0 0 25px #fff700); }
-    }
-    .layer {
-      width: 0; height: 0;
-      position: relative;
-      margin-bottom: -18px;
-    }
-    .layer::before {
-      content: '';
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      border-style: solid;
-      border-color: transparent;
-      animation: treeSway 3s ease-in-out infinite;
-    }
-    .layer:nth-child(1)::before {
-      border-width: 0 70px 100px 70px;
-      border-bottom-color: #1a5c1a;
-      animation-delay: 0s;
-    }
-    .layer:nth-child(2)::before {
-      border-width: 0 100px 120px 100px;
-      border-bottom-color: #228b22;
-      animation-delay: 0.3s;
-    }
-    .layer:nth-child(3)::before {
-      border-width: 0 130px 140px 130px;
-      border-bottom-color: #2e8b2e;
-      animation-delay: 0.6s;
-    }
-    @keyframes treeSway {
-      0%, 100% { transform: translate(-50%, -50%) rotate(-1deg); }
-      50% { transform: translate(-50%, -50%) rotate(1deg); }
-    }
-    .trunk {
-      width: 40px; height: 70px;
-      background: linear-gradient(90deg, #5c3a1e 0%, #8b5e3c 50%, #5c3a1e 100%);
-      border-radius: 0 0 5px 5px;
-      margin-top: -10px;
-    }
-    .ornaments {
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
+    canvas { display: block; }
+    #title {
+      position: fixed;
+      top: 28px;
       width: 100%;
-      height: 100%;
+      text-align: center;
+      color: #ffd700;
+      font-size: 1.8rem;
+      letter-spacing: 4px;
+      text-shadow: 0 0 20px #ffd700, 0 0 40px #ff8c00, 0 0 60px #ff4500;
+      animation: titleGlow 3s ease-in-out infinite alternate;
       pointer-events: none;
+      z-index: 10;
     }
-    .ornament {
-      position: absolute;
-      border-radius: 50%;
-      animation: twinkle var(--dur) ease-in-out infinite;
-      box-shadow: 0 0 8px var(--color), inset 0 0 4px rgba(255,255,255,0.4);
+    @keyframes titleGlow {
+      from { text-shadow: 0 0 20px #ffd700, 0 0 40px #ff8c00, 0 0 60px #ff4500; opacity: 0.9; }
+      to   { text-shadow: 0 0 30px #fff700, 0 0 60px #ff8c00, 0 0 90px #ff4500; opacity: 1; }
     }
-    @keyframes twinkle {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-    .snow-ground {
-      position: absolute;
-      bottom: -80px;
-      left: 50%; transform: translateX(-50%);
-      width: 500px; height: 80px;
-      background: radial-gradient(ellipse at center, rgba(200,220,255,0.9) 0%, rgba(150,190,240,0.6) 60%, transparent 100%);
-      border-radius: 50%;
-      filter: blur(3px);
-    }
-    .snowflakes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-    .snowflake {
-      position: absolute;
-      top: -20px;
-      color: #fff;
-      font-size: var(--size, 14px);
-      animation: fall linear infinite;
-      opacity: 0.8;
-      text-shadow: 0 0 5px rgba(200,220,255,0.8);
-    }
-    @keyframes fall {
-      0% { transform: translateY(-20px) rotate(0deg); opacity: 0.8; }
-      100% { transform: translateY(100vh) rotate(360deg); opacity: 0.2; }
-    }
-    .lights {
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 100%; height: 100%;
-      pointer-events: none;
-    }
-    .light {
-      position: absolute;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      animation: lightFlash var(--dur) ease-in-out infinite;
-    }
-    @keyframes lightFlash {
-      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--c), 0 0 15px var(--c); }
-      50% { opacity: 0.3; box-shadow: none; }
-    }
-    .gift-area {
-      position: absolute;
-      bottom: -65px;
-      left: 50%; transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-    }
-    .gift {
-      width: var(--w); height: var(--h);
-      background: linear-gradient(135deg, var(--gc) 0%, color-mix(in srgb, var(--gc) 70%, #000) 100%);
-      border-radius: 4px;
-      position: relative;
-      animation: giftBounce 2s ease-in-out infinite;
-      animation-delay: var(--delay);
-    }
-    .gift::before {
-      content: ''; position: absolute;
-      top: 0; left: 50%; transform: translateX(-50%);
-      width: 6px; height: 100%;
-      background: #f0c040;
-    }
-    .gift::after {
-      content: ''; position: absolute;
-      top: 50%; left: 0; transform: translateY(-50%);
-      width: 100%; height: 6px;
-      background: #f0c040;
-    }
-    @keyframes giftBounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-5px); }
-    }
-    .footer {
+    #hint {
       position: fixed;
       bottom: 20px;
-      color: rgba(200,220,255,0.6);
-      font-size: 0.9rem;
+      width: 100%;
       text-align: center;
+      color: rgba(200,220,255,0.5);
+      font-size: 0.85rem;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #tree-info {
+      position: fixed;
+      top: 75px;
+      width: 100%;
+      text-align: center;
+      color: rgba(180,210,255,0.6);
+      font-size: 0.8rem;
+      pointer-events: none;
+      z-index: 10;
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
-  <h1>🎄 Merry Christmas 🎄</h1>
-  <div class="tree-container">
-    <div class="tree">
-      <div class="star"></div>
-      <div class="layer"></div>
-      <div class="layer"></div>
-      <div class="layer"></div>
-      <div class="trunk"></div>
-      <div class="ornaments" id="ornaments"></div>
-      <div class="lights" id="lights"></div>
-      <div class="gift-area" id="gifts"></div>
-      <div class="snow-ground"></div>
-    </div>
-  </div>
-  <div class="snowflakes" id="snowflakes"></div>
-  <div class="footer">✨ Happy Holidays from OpenClaw ✨</div>
+  <div id="title">🎄 Merry Christmas 🎄</div>
+  <div id="tree-info">🖱️ Drag to rotate &nbsp;|&nbsp; Scroll to zoom</div>
+  <div id="hint">✨ Happy Holidays ✨</div>
 
-  <script>
-    // 装饰球
-    const ornamentData = [
-      {x: 85,  y: 95,  r: 10, c: '#ff3b3b'}, {x: 155, y: 100, r: 9,  c: '#3b8bff'},
-      {x: 35,  y: 105, r: 11, c: '#ff3bff'}, {x: 115, y: 145, r: 10, c: '#3bff8b'},
-      {x: 65,  y: 160, r: 9,  c: '#ff3b3b'}, {x: 175, y: 155, r: 11, c: '#ffb300'},
-      {x: 45,  y: 195, r: 10, c: '#3b8bff'}, {x: 95,  y: 200, r: 9,  c: '#ff3bff'},
-      {x: 145, y: 190, r: 11, c: '#3bff8b'}, {x: 25,  y: 230, r: 10, c: '#ff3b3b'},
-      {x: 75,  y: 245, r: 9,  c: '#ffb300'}, {x: 125, y: 250, r: 11, c: '#3b8bff'},
-      {x: 175, y: 240, r: 10, c: '#ff3bff'}, {x: 55,  y: 285, r: 11, c: '#3bff8b'},
-      {x: 105, y: 290, r: 10, c: '#ff3b3b'}, {x: 155, y: 285, r: 9,  c: '#ffb300'},
-      {x: 35,  y: 315, r: 10, c: '#3b8bff'}, {x: 200, y: 310, r: 11, c: '#ff3bff'},
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ─── Scene Setup ───────────────────────────────────────────────
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000510, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(0, 6, 18);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 8;
+    controls.maxDistance = 35;
+    controls.maxPolarAngle = Math.PI * 0.85;
+    controls.target.set(0, 3.5, 0);
+    controls.update();
+
+    // ─── Lighting ───────────────────────────────────────────────────
+    const ambient = new THREE.AmbientLight(0x1a2a4a, 0.6);
+    scene.add(ambient);
+
+    const starLight = new THREE.PointLight(0xffd700, 3, 30);
+    starLight.position.set(0, 11, 0);
+    starLight.castShadow = true;
+    scene.add(starLight);
+
+    const warmLight = new THREE.PointLight(0xff6622, 1.5, 20);
+    warmLight.position.set(4, 3, 4);
+    scene.add(warmLight);
+
+    const coolLight = new THREE.PointLight(0x2266ff, 1.0, 20);
+    coolLight.position.set(-4, 2, -4);
+    scene.add(coolLight);
+
+    const groundLight = new THREE.PointLight(0x88aaff, 0.5, 15);
+    groundLight.position.set(0, 0.5, 0);
+    scene.add(groundLight);
+
+    // ─── Materials ──────────────────────────────────────────────────
+    const trunkMat  = new THREE.MeshStandardMaterial({ color: 0x5c3317, roughness: 0.9, metalness: 0.0 });
+    const treeMatA  = new THREE.MeshStandardMaterial({ color: 0x0d4d0d, roughness: 0.8, metalness: 0.05 });
+    const treeMatB  = new THREE.MeshStandardMaterial({ color: 0x166b16, roughness: 0.8, metalness: 0.05 });
+    const treeMatC  = new THREE.MeshStandardMaterial({ color: 0x1f8a1f, roughness: 0.8, metalness: 0.05 });
+    const snowMat   = new THREE.MeshStandardMaterial({ color: 0xddeeff, roughness: 0.3, metalness: 0.1, transparent: true, opacity: 0.85 });
+    const starMat   = new THREE.MeshStandardMaterial({ color: 0xffdd00, emissive: 0xffaa00, emissiveIntensity: 2.5, roughness: 0.2, metalness: 0.8 });
+    const ornamentMats = [
+      new THREE.MeshStandardMaterial({ color: 0xff2222, roughness: 0.2, metalness: 0.6, emissive: 0x441111 }),
+      new THREE.MeshStandardMaterial({ color: 0x2255ff, roughness: 0.2, metalness: 0.6, emissive: 0x112244 }),
+      new THREE.MeshStandardMaterial({ color: 0xff22ff, roughness: 0.2, metalness: 0.6, emissive: 0x441144 }),
+      new THREE.MeshStandardMaterial({ color: 0x22ffaa, roughness: 0.2, metalness: 0.6, emissive: 0x114433 }),
+      new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.2, metalness: 0.6, emissive: 0x443311 }),
+      new THREE.MeshStandardMaterial({ color: 0x00ccff, roughness: 0.2, metalness: 0.6, emissive: 0x112233 }),
     ];
 
-    const oContainer = document.getElementById('ornaments');
-    ornamentData.forEach(d => {
-      const el = document.createElement('div');
-      el.className = 'ornament';
-      el.style.cssText = `left:${d.x}px;top:${d.y}px;width:${d.r*2}px;height:${d.r*2}px;background:var(--c,${d.c});--color:${d.c};--dur:${(1+Math.random()*1).toFixed(2)}s`;
-      oContainer.appendChild(el);
+    // ─── Tree ───────────────────────────────────────────────────────
+    const treeGroup = new THREE.Group();
+
+    // Trunk
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 1.5, 12), trunkMat);
+    trunk.position.y = 0.75;
+    trunk.castShadow = true;
+    treeGroup.add(trunk);
+
+    // Tree layers (cone shape)
+    const layers = [
+      { r: 2.8, h: 3.2, y: 2.6, mat: treeMatA, segments: 12 },
+      { r: 2.2, h: 2.8, y: 4.8, mat: treeMatB, segments: 12 },
+      { r: 1.6, h: 2.5, y: 6.7, mat: treeMatC, segments: 12 },
+      { r: 1.0, h: 2.2, y: 8.4, mat: treeMatA, segments: 12 },
+    ];
+    layers.forEach(l => {
+      const geo = new THREE.ConeGeometry(l.r, l.h, l.segments);
+      const mesh = new THREE.Mesh(geo, l.mat);
+      mesh.position.y = l.y;
+      mesh.castShadow = true;
+      treeGroup.add(mesh);
     });
 
-    // 彩灯
-    const lightColors = ['#ff3b3b','#3b8bff','#3bff8b','#ff3bff','#ffb300','#00ffff'];
-    const lightPositions = [];
-    for (let i = 0; i < 5; i++) {
-      const y = 70 + i * 50;
-      const count = 6 + i * 2;
-      for (let j = 0; j < count; j++) {
-        const t = j / count;
-        const x = 130 - (130 - i*15) + (260 - i*30) * t;
-        lightPositions.push({x: x + (Math.random()-0.5)*10, y: y + (Math.random()-0.5)*8});
+    // ─── Star ───────────────────────────────────────────────────────
+    const starGeo = new THREE.OctahedronGeometry(0.45, 0);
+    const starMesh = new THREE.Mesh(starGeo, starMat);
+    starMesh.position.y = 10.0;
+    starMesh.rotation.y = Math.PI / 4;
+    treeGroup.add(starMesh);
+
+    // ─── Ornaments ──────────────────────────────────────────────────
+    const ornamentGeo = new THREE.SphereGeometry(0.2, 14, 14);
+
+    const ornamentPositions = [
+      // Bottom layer
+      [1.8, 1.6, 1.5], [-1.5, 1.8, 1.2], [0.5, 1.5, -2.0], [-0.8, 2.0, -1.5], [1.2, 2.2, -1.0],
+      // 2nd layer
+      [1.5, 3.5, 1.0], [-1.2, 3.8, 0.8], [0.3, 3.4, -1.6], [-0.5, 4.0, 0.5], [1.0, 3.6, -1.2],
+      [0.8, 3.2, 1.5], [-1.0, 3.5, -1.0],
+      // 3rd layer
+      [1.0, 5.5, 0.6], [-0.8, 5.8, 0.4], [0.2, 5.4, -1.1], [-0.3, 6.0, 0.2], [0.7, 5.6, -0.5],
+      [0.4, 5.2, 0.9], [-0.6, 5.5, -0.7],
+      // Top layer
+      [0.6, 7.5, 0.3], [-0.4, 7.8, 0.2], [0.1, 7.4, -0.7], [0.3, 7.6, 0.5],
+    ];
+
+    const ornamentObjects = [];
+    ornamentPositions.forEach((pos, i) => {
+      const mat = ornamentMats[i % ornamentMats.length];
+      const mesh = new THREE.Mesh(ornamentGeo, mat);
+      mesh.position.set(...pos);
+      const scale = 0.8 + Math.random() * 0.5;
+      mesh.scale.setScalar(scale);
+      mesh.castShadow = true;
+      treeGroup.add(mesh);
+      ornamentObjects.push({ mesh, baseIntensity: 0.5 + Math.random(), phase: Math.random() * Math.PI * 2 });
+    });
+
+    // Ornament hooks (thin wire)
+    ornamentPositions.forEach((pos) => {
+      const hookGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.25, 4);
+      const hookMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.9, roughness: 0.2 });
+      const hook = new THREE.Mesh(hookGeo, hookMat);
+      hook.position.set(pos[0], pos[1] + 0.28, pos[2]);
+      treeGroup.add(hook);
+    });
+
+    // ─── Lights (bulbs on tree) ─────────────────────────────────────
+    const lightBulbGeo = new THREE.SphereGeometry(0.07, 8, 8);
+    const lightColors = [0xff3333, 0x33ff33, 0x3333ff, 0xffff33, 0xff33ff, 0x33ffff, 0xffaa00];
+    const lightBulbMatts = lightColors.map(c => new THREE.MeshStandardMaterial({
+      color: c, emissive: c, emissiveIntensity: 2.0, roughness: 0.1, metalness: 0.0,
+    }));
+    const lightBulbObjects = [];
+
+    // Spiral lights around tree
+    for (let layer = 0; layer < 4; layer++) {
+      const count = 8 + layer * 4;
+      const yBase = 1.8 + layer * 2.2;
+      const rBase = 2.2 - layer * 0.5;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + layer * 0.4;
+        const r = rBase + (Math.random() - 0.5) * 0.3;
+        const y = yBase + (Math.random() - 0.5) * 1.2;
+        const mat = lightBulbMatts[i % lightColors.length];
+        const bulb = new THREE.Mesh(lightBulbGeo, mat);
+        bulb.position.set(Math.cos(angle) * r, y, Math.sin(angle) * r);
+        treeGroup.add(bulb);
+        lightBulbObjects.push({ mesh: bulb, mat, color: lightColors[i % lightColors.length], phase: Math.random() * Math.PI * 2 });
       }
     }
-    const lContainer = document.getElementById('lights');
-    lightPositions.forEach(p => {
-      const c = lightColors[Math.floor(Math.random()*lightColors.length)];
-      const el = document.createElement('div');
-      el.className = 'light';
-      el.style.cssText = `left:${p.x}px;top:${p.y}px;background:${c};--c:${c};--dur:${(0.5+Math.random()*1.5).toFixed(2)}s`;
-      lContainer.appendChild(el);
-    });
 
-    // 礼物
-    const giftData = [
-      {w:35, h:30, c:'#e74c3c', d:'0s'},
-      {w:45, h:38, c:'#3498db', d:'0.3s'},
-      {w:30, h:25, c:'#2ecc71', d:'0.6s'},
-      {w:40, h:35, c:'#9b59b6', d:'0.9s'},
-      {w:35, h:32, c:'#f39c12', d:'1.2s'},
-    ];
-    const gContainer = document.getElementById('gifts');
-    giftData.forEach(g => {
-      const el = document.createElement('div');
-      el.className = 'gift';
-      el.style.cssText = `--w:${g.w}px;--h:${g.h}px;--gc:${g.c};--delay:${g.d}`;
-      gContainer.appendChild(el);
-    });
+    // ─── Snow Ground ────────────────────────────────────────────────
+    const groundGeo = new THREE.CylinderGeometry(6, 6, 0.3, 32);
+    const ground = new THREE.Mesh(groundGeo, snowMat);
+    ground.position.y = 0.15;
+    ground.receiveShadow = true;
+    scene.add(ground);
 
-    // 雪花
-    const sfContainer = document.getElementById('snowflakes');
-    const flakes = ['❄','❅','❆','✦','•'];
-    for (let i = 0; i < 60; i++) {
-      const el = document.createElement('div');
-      el.className = 'snowflake';
-      el.textContent = flakes[Math.floor(Math.random()*flakes.length)];
-      el.style.cssText = `left:${Math.random()*100}vw;animation-duration:${(3+Math.random()*6).toFixed(1)}s;animation-delay:${(Math.random()*8).toFixed(1)}s;--size:${(10+Math.random()*14).toFixed(0)}px;opacity:${(0.4+Math.random()*0.6).toFixed(2)}`;
-      sfContainer.appendChild(el);
+    // Snow mounds
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const r = 3 + Math.random() * 2;
+      const moundGeo = new THREE.SphereGeometry(0.4 + Math.random() * 0.5, 12, 12);
+      const mound = new THREE.Mesh(moundGeo, snowMat);
+      mound.position.set(Math.cos(angle) * r, 0.2, Math.sin(angle) * r);
+      mound.scale.y = 0.5;
+      mound.receiveShadow = true;
+      scene.add(mound);
     }
+
+    // ─── Gifts ──────────────────────────────────────────────────────
+    const giftConfigs = [
+      { x: -1.8, z: 1.0, w: 0.8, h: 0.7, c: 0xe74c3c, ribbon: 0xf1c40f },
+      { x:  1.5, z: 1.2, w: 0.6, h: 0.5, c: 0x3498db, ribbon: 0xf1c40f },
+      { x: -2.2, z: 0.3, w: 0.5, h: 0.45, c: 0x9b59b6, ribbon: 0xe74c3c },
+      { x:  2.0, z: 0.5, w: 0.7, h: 0.6, c: 0x2ecc71, ribbon: 0xf1c40f },
+      { x:  0.5, z: 2.0, w: 0.55, h: 0.5, c: 0xe67e22, ribbon: 0xf1c40f },
+      { x: -0.8, z: 2.2, w: 0.45, h: 0.4, c: 0x1abc9c, ribbon: 0xe74c3c },
+      { x:  2.5, z:-0.5, w: 0.5, h: 0.45, c: 0xf39c12, ribbon: 0x3498db },
+    ];
+
+    giftConfigs.forEach(cfg => {
+      const boxGeo = new THREE.BoxGeometry(cfg.w, cfg.h, cfg.w);
+      const boxMat = new THREE.MeshStandardMaterial({ color: cfg.c, roughness: 0.5, metalness: 0.1 });
+      const box = new THREE.Mesh(boxGeo, boxMat);
+      box.position.set(cfg.x, cfg.h / 2, cfg.z);
+      box.rotation.y = Math.random() * 0.5 - 0.25;
+      box.castShadow = true;
+      scene.add(box);
+
+      // Ribbon cross
+      const ribH = new THREE.Mesh(new THREE.BoxGeometry(cfg.w + 0.02, 0.08, 0.08), new THREE.MeshStandardMaterial({ color: cfg.ribbon, metalness: 0.5 }));
+      const ribV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, cfg.w + 0.02), new THREE.MeshStandardMaterial({ color: cfg.ribbon, metalness: 0.5 }));
+      ribH.position.set(cfg.x, cfg.h + 0.04, cfg.z);
+      ribV.position.set(cfg.x, cfg.h + 0.04, cfg.z);
+      ribH.rotation.y = box.rotation.y;
+      ribV.rotation.y = box.rotation.y;
+      scene.add(ribH);
+      scene.add(ribV);
+
+      // Bow
+      const bowGeo = new THREE.SphereGeometry(0.1, 8, 8);
+      const bowMat = new THREE.MeshStandardMaterial({ color: cfg.ribbon, roughness: 0.4, metalness: 0.3 });
+      const bow = new THREE.Mesh(bowGeo, bowMat);
+      bow.position.set(cfg.x, cfg.h + 0.12, cfg.z);
+      scene.add(bow);
+    });
+
+    scene.add(treeGroup);
+
+    // ─── Snow Particles ─────────────────────────────────────────────
+    const SNOW_COUNT = 3000;
+    const snowGeo = new THREE.BufferGeometry();
+    const snowPositions = new Float32Array(SNOW_COUNT * 3);
+    const snowSizes = new Float32Array(SNOW_COUNT);
+    const snowPhases = new Float32Array(SNOW_COUNT);
+
+    for (let i = 0; i < SNOW_COUNT; i++) {
+      snowPositions[i * 3]     = (Math.random() - 0.5) * 40;
+      snowPositions[i * 3 + 1] = Math.random() * 25;
+      snowPositions[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      snowSizes[i]  = Math.random() * 3 + 1;
+      snowPhases[i] = Math.random() * Math.PI * 2;
+    }
+    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+    snowGeo.setAttribute('size', new THREE.BufferAttribute(snowSizes, 1));
+
+    const snowMattr = new THREE.PointsMaterial({
+      color: 0xddeeff, size: 0.12, transparent: true, opacity: 0.7,
+      sizeAttenuation: true, depthWrite: false,
+    });
+    const snowParticles = new THREE.Points(snowGeo, snowMattr);
+    scene.add(snowParticles);
+
+    // ─── Background Stars ───────────────────────────────────────────
+    const BG_STAR_COUNT = 1500;
+    const bgGeo = new THREE.BufferGeometry();
+    const bgPos = new Float32Array(BG_STAR_COUNT * 3);
+    for (let i = 0; i < BG_STAR_COUNT; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 80 + Math.random() * 20;
+      bgPos[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+      bgPos[i * 3 + 1] = Math.abs(r * Math.cos(phi)); // upper hemisphere
+      bgPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
+    const bgStars = new THREE.Points(bgGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.8 }));
+    scene.add(bgStars);
+
+    // ─── Animation ──────────────────────────────────────────────────
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Star rotation & pulse
+      starMesh.rotation.y += 0.008;
+      starMesh.scale.setScalar(1 + Math.sin(t * 2) * 0.08);
+      starLight.intensity = 2.5 + Math.sin(t * 1.5) * 0.8;
+
+      // Ornaments twinkle
+      ornamentObjects.forEach(({ mesh, baseIntensity, phase }) => {
+        const mat = mesh.material;
+        mat.emissiveIntensity = baseIntensity * (0.5 + 0.5 * Math.sin(t * 2 + phase));
+      });
+
+      // Light bulbs flash in sequence
+      lightBulbObjects.forEach(({ mat, phase }, i) => {
+        const synced = Math.sin(t * 3 + phase + i * 0.3);
+        mat.emissiveIntensity = synced > 0 ? 2.0 : 0.1;
+      });
+
+      // Warm & cool light pulse
+      warmLight.intensity = 1.2 + Math.sin(t * 0.8) * 0.4;
+      coolLight.intensity = 0.8 + Math.sin(t * 1.1 + 1) * 0.3;
+
+      // Snow falling
+      const positions = snowGeo.attributes.position.array;
+      for (let i = 0; i < SNOW_COUNT; i++) {
+        positions[i * 3 + 1] -= 0.015 + Math.sin(t + snowPhases[i]) * 0.003;
+        positions[i * 3]     += Math.sin(t * 0.5 + snowPhases[i]) * 0.003;
+        if (positions[i * 3 + 1] < -1) {
+          positions[i * 3 + 1] = 22;
+          positions[i * 3]     = (Math.random() - 0.5) * 40;
+        }
+      }
+      snowGeo.attributes.position.needsUpdate = true;
+
+      // Background stars twinkle
+      bgStars.material.opacity = 0.6 + Math.sin(t * 0.3) * 0.2;
+
+      // Gentle tree sway
+      treeGroup.rotation.z = Math.sin(t * 0.4) * 0.015;
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ─── Resize ─────────────────────────────────────────────────────
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
   </script>
 </body>
 </html>
