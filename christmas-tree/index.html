@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎄 Merry Christmas</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    h1 {
+      color: #f0c040;
+      font-size: 2.2rem;
+      text-align: center;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px #f0c040, 0 0 40px #ff6b00;
+      animation: glow 2s ease-in-out infinite alternate;
+      letter-spacing: 2px;
+    }
+    @keyframes glow {
+      from { text-shadow: 0 0 20px #f0c040, 0 0 40px #ff6b00; }
+      to   { text-shadow: 0 0 30px #ffdd70, 0 0 60px #ff9500, 0 0 80px #ff6b00; }
+    }
+    .tree-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tree {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .star {
+      width: 50px; height: 50px;
+      background: radial-gradient(circle, #fff700 0%, #ffb300 60%, transparent 100%);
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      animation: starPulse 1.5s ease-in-out infinite;
+      margin-bottom: -10px;
+      filter: drop-shadow(0 0 10px #ffb300);
+    }
+    @keyframes starPulse {
+      0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 10px #ffb300); }
+      50% { transform: scale(1.2) rotate(10deg); filter: drop-shadow(0 0 25px #fff700); }
+    }
+    .layer {
+      width: 0; height: 0;
+      position: relative;
+      margin-bottom: -18px;
+    }
+    .layer::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      border-style: solid;
+      border-color: transparent;
+      animation: treeSway 3s ease-in-out infinite;
+    }
+    .layer:nth-child(1)::before {
+      border-width: 0 70px 100px 70px;
+      border-bottom-color: #1a5c1a;
+      animation-delay: 0s;
+    }
+    .layer:nth-child(2)::before {
+      border-width: 0 100px 120px 100px;
+      border-bottom-color: #228b22;
+      animation-delay: 0.3s;
+    }
+    .layer:nth-child(3)::before {
+      border-width: 0 130px 140px 130px;
+      border-bottom-color: #2e8b2e;
+      animation-delay: 0.6s;
+    }
+    @keyframes treeSway {
+      0%, 100% { transform: translate(-50%, -50%) rotate(-1deg); }
+      50% { transform: translate(-50%, -50%) rotate(1deg); }
+    }
+    .trunk {
+      width: 40px; height: 70px;
+      background: linear-gradient(90deg, #5c3a1e 0%, #8b5e3c 50%, #5c3a1e 100%);
+      border-radius: 0 0 5px 5px;
+      margin-top: -10px;
+    }
+    .ornaments {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .ornament {
+      position: absolute;
+      border-radius: 50%;
+      animation: twinkle var(--dur) ease-in-out infinite;
+      box-shadow: 0 0 8px var(--color), inset 0 0 4px rgba(255,255,255,0.4);
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .snow-ground {
+      position: absolute;
+      bottom: -80px;
+      left: 50%; transform: translateX(-50%);
+      width: 500px; height: 80px;
+      background: radial-gradient(ellipse at center, rgba(200,220,255,0.9) 0%, rgba(150,190,240,0.6) 60%, transparent 100%);
+      border-radius: 50%;
+      filter: blur(3px);
+    }
+    .snowflakes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+    .snowflake {
+      position: absolute;
+      top: -20px;
+      color: #fff;
+      font-size: var(--size, 14px);
+      animation: fall linear infinite;
+      opacity: 0.8;
+      text-shadow: 0 0 5px rgba(200,220,255,0.8);
+    }
+    @keyframes fall {
+      0% { transform: translateY(-20px) rotate(0deg); opacity: 0.8; }
+      100% { transform: translateY(100vh) rotate(360deg); opacity: 0.2; }
+    }
+    .lights {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .light {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      animation: lightFlash var(--dur) ease-in-out infinite;
+    }
+    @keyframes lightFlash {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--c), 0 0 15px var(--c); }
+      50% { opacity: 0.3; box-shadow: none; }
+    }
+    .gift-area {
+      position: absolute;
+      bottom: -65px;
+      left: 50%; transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .gift {
+      width: var(--w); height: var(--h);
+      background: linear-gradient(135deg, var(--gc) 0%, color-mix(in srgb, var(--gc) 70%, #000) 100%);
+      border-radius: 4px;
+      position: relative;
+      animation: giftBounce 2s ease-in-out infinite;
+      animation-delay: var(--delay);
+    }
+    .gift::before {
+      content: ''; position: absolute;
+      top: 0; left: 50%; transform: translateX(-50%);
+      width: 6px; height: 100%;
+      background: #f0c040;
+    }
+    .gift::after {
+      content: ''; position: absolute;
+      top: 50%; left: 0; transform: translateY(-50%);
+      width: 100%; height: 6px;
+      background: #f0c040;
+    }
+    @keyframes giftBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    .footer {
+      position: fixed;
+      bottom: 20px;
+      color: rgba(200,220,255,0.6);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎄 Merry Christmas 🎄</h1>
+  <div class="tree-container">
+    <div class="tree">
+      <div class="star"></div>
+      <div class="layer"></div>
+      <div class="layer"></div>
+      <div class="layer"></div>
+      <div class="trunk"></div>
+      <div class="ornaments" id="ornaments"></div>
+      <div class="lights" id="lights"></div>
+      <div class="gift-area" id="gifts"></div>
+      <div class="snow-ground"></div>
+    </div>
+  </div>
+  <div class="snowflakes" id="snowflakes"></div>
+  <div class="footer">✨ Happy Holidays from OpenClaw ✨</div>
+
+  <script>
+    // 装饰球
+    const ornamentData = [
+      {x: 85,  y: 95,  r: 10, c: '#ff3b3b'}, {x: 155, y: 100, r: 9,  c: '#3b8bff'},
+      {x: 35,  y: 105, r: 11, c: '#ff3bff'}, {x: 115, y: 145, r: 10, c: '#3bff8b'},
+      {x: 65,  y: 160, r: 9,  c: '#ff3b3b'}, {x: 175, y: 155, r: 11, c: '#ffb300'},
+      {x: 45,  y: 195, r: 10, c: '#3b8bff'}, {x: 95,  y: 200, r: 9,  c: '#ff3bff'},
+      {x: 145, y: 190, r: 11, c: '#3bff8b'}, {x: 25,  y: 230, r: 10, c: '#ff3b3b'},
+      {x: 75,  y: 245, r: 9,  c: '#ffb300'}, {x: 125, y: 250, r: 11, c: '#3b8bff'},
+      {x: 175, y: 240, r: 10, c: '#ff3bff'}, {x: 55,  y: 285, r: 11, c: '#3bff8b'},
+      {x: 105, y: 290, r: 10, c: '#ff3b3b'}, {x: 155, y: 285, r: 9,  c: '#ffb300'},
+      {x: 35,  y: 315, r: 10, c: '#3b8bff'}, {x: 200, y: 310, r: 11, c: '#ff3bff'},
+    ];
+
+    const oContainer = document.getElementById('ornaments');
+    ornamentData.forEach(d => {
+      const el = document.createElement('div');
+      el.className = 'ornament';
+      el.style.cssText = `left:${d.x}px;top:${d.y}px;width:${d.r*2}px;height:${d.r*2}px;background:var(--c,${d.c});--color:${d.c};--dur:${(1+Math.random()*1).toFixed(2)}s`;
+      oContainer.appendChild(el);
+    });
+
+    // 彩灯
+    const lightColors = ['#ff3b3b','#3b8bff','#3bff8b','#ff3bff','#ffb300','#00ffff'];
+    const lightPositions = [];
+    for (let i = 0; i < 5; i++) {
+      const y = 70 + i * 50;
+      const count = 6 + i * 2;
+      for (let j = 0; j < count; j++) {
+        const t = j / count;
+        const x = 130 - (130 - i*15) + (260 - i*30) * t;
+        lightPositions.push({x: x + (Math.random()-0.5)*10, y: y + (Math.random()-0.5)*8});
+      }
+    }
+    const lContainer = document.getElementById('lights');
+    lightPositions.forEach(p => {
+      const c = lightColors[Math.floor(Math.random()*lightColors.length)];
+      const el = document.createElement('div');
+      el.className = 'light';
+      el.style.cssText = `left:${p.x}px;top:${p.y}px;background:${c};--c:${c};--dur:${(0.5+Math.random()*1.5).toFixed(2)}s`;
+      lContainer.appendChild(el);
+    });
+
+    // 礼物
+    const giftData = [
+      {w:35, h:30, c:'#e74c3c', d:'0s'},
+      {w:45, h:38, c:'#3498db', d:'0.3s'},
+      {w:30, h:25, c:'#2ecc71', d:'0.6s'},
+      {w:40, h:35, c:'#9b59b6', d:'0.9s'},
+      {w:35, h:32, c:'#f39c12', d:'1.2s'},
+    ];
+    const gContainer = document.getElementById('gifts');
+    giftData.forEach(g => {
+      const el = document.createElement('div');
+      el.className = 'gift';
+      el.style.cssText = `--w:${g.w}px;--h:${g.h}px;--gc:${g.c};--delay:${g.d}`;
+      gContainer.appendChild(el);
+    });
+
+    // 雪花
+    const sfContainer = document.getElementById('snowflakes');
+    const flakes = ['❄','❅','❆','✦','•'];
+    for (let i = 0; i < 60; i++) {
+      const el = document.createElement('div');
+      el.className = 'snowflake';
+      el.textContent = flakes[Math.floor(Math.random()*flakes.length)];
+      el.style.cssText = `left:${Math.random()*100}vw;animation-duration:${(3+Math.random()*6).toFixed(1)}s;animation-delay:${(Math.random()*8).toFixed(1)}s;--size:${(10+Math.random()*14).toFixed(0)}px;opacity:${(0.4+Math.random()*0.6).toFixed(2)}`;
+      sfContainer.appendChild(el);
+    }
+  </script>
+</body>
+</html>
