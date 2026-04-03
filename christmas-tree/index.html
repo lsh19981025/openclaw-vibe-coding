@@ -38,10 +38,10 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // Scene setup
+    // ─── Scene setup ───────────────────────────────────────────
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x010208);
-    scene.fog = new THREE.FogExp2(0x010208, 0.008);
+    scene.fog = new THREE.FogExp2(0x010208, 0.007);
 
     const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 200);
     camera.position.set(0, 8, 22);
@@ -52,7 +52,7 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.6;
+    renderer.toneMappingExposure = 1.8;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     document.body.appendChild(renderer.domElement);
 
@@ -64,229 +64,411 @@
     controls.target.set(0, 5, 0);
     controls.update();
 
-    // Ambient light - cool blue for depth
-    scene.add(new THREE.AmbientLight(0x1a2a3a, 1.2));
+    // ─── Lighting ─────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0x1a2a4a, 1.5));
 
-    // Key light - warm from right-front
-    const keyLight = new THREE.DirectionalLight(0xfffaee, 1.8);
-    keyLight.position.set(8, 12, 10);
+    // Warm key light
+    const keyLight = new THREE.DirectionalLight(0xfff4dd, 2.2);
+    keyLight.position.set(8, 14, 10);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.set(2048, 2048);
     keyLight.shadow.camera.near = 0.5;
-    keyLight.shadow.camera.far = 50;
+    keyLight.shadow.camera.far = 60;
+    keyLight.shadow.bias = -0.001;
     scene.add(keyLight);
 
-    // Fill light - cool blue from left
-    const fillLight = new THREE.DirectionalLight(0x6699ff, 0.6);
+    // Cool fill light
+    const fillLight = new THREE.DirectionalLight(0x6699ff, 0.8);
     fillLight.position.set(-8, 6, 5);
     scene.add(fillLight);
 
-    // Rim light - backlight for tree silhouette
-    const rimLight = new THREE.DirectionalLight(0xffeedd, 0.8);
-    rimLight.position.set(0, 8, -10);
+    // Rim light
+    const rimLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+    rimLight.position.set(0, 10, -12);
     scene.add(rimLight);
 
-    // Top star glow light
-    const starGlow = new THREE.PointLight(0xffdd44, 3, 15);
+    // Warm glow from tree interior
+    const warmGlow = new THREE.PointLight(0xffaa44, 4, 20);
+    warmGlow.position.set(0, 6, 0);
+    scene.add(warmGlow);
+
+    // Star glow
+    const starGlow = new THREE.PointLight(0xffdd44, 5, 18);
     starGlow.position.set(0, 14.5, 0);
     scene.add(starGlow);
 
-    // === Star topper (5-pointed) ===
+    // ─── Helpers ───────────────────────────────────────────────
+    function addBarkNoise(geo, strength = 0.04) {
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * strength);
+        pos.setY(i, pos.getY(i) + (Math.random() - 0.5) * strength * 0.5);
+        pos.setZ(i, pos.getZ(i) + (Math.random() - 0.5) * strength);
+      }
+      pos.needsUpdate = true;
+      geo.computeVertexNormals();
+    }
+
+    // ─── Star topper — proper 5-pointed star ──────────────────
+    function buildStar5(innerR, outerR, depth) {
+      const shape = new THREE.Shape();
+      const pts = 5, step = Math.PI / pts;
+      for (let i = 0; i < pts * 2; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = i * step - Math.PI / 2;
+        if (i === 0) shape.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        else shape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+      }
+      shape.closePath();
+      return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 });
+    }
+
     const starMat = new THREE.MeshStandardMaterial({
-      color: 0xffdd00, emissive: 0xffaa00, emissiveIntensity: 5,
-      roughness: 0.2, metalness: 0.9
+      color: 0xffee00, emissive: 0xffaa00, emissiveIntensity: 6,
+      roughness: 0.1, metalness: 1.0
     });
     const starGroup = new THREE.Group();
-    const sGeo = new THREE.OctahedronGeometry(0.6, 0);
-    const starMesh = new THREE.Mesh(sGeo, starMat);
+
+    // Main star body
+    const starGeo = buildStar5(0.22, 0.65, 0.25);
+    const starMesh = new THREE.Mesh(starGeo, starMat);
+    starMesh.rotation.x = Math.PI / 2;
+    starMesh.castShadow = true;
     starGroup.add(starMesh);
-    const crossGeo = new THREE.BoxGeometry(2.4, 0.09, 0.09);
-    const cross = new THREE.Mesh(crossGeo, starMat);
-    starGroup.add(cross);
-    const cross2 = cross.clone();
-    cross2.rotation.y = Math.PI / 2;
-    starGroup.add(cross2);
-    starGroup.position.y = 14;
+
+    // Secondary smaller star offset for depth
+    const starGeo2 = buildStar5(0.15, 0.45, 0.1);
+    const starMesh2 = new THREE.Mesh(starGeo2, new THREE.MeshStandardMaterial({
+      color: 0xffffff, emissive: 0xffcc00, emissiveIntensity: 4, roughness: 0.05, metalness: 1.0
+    }));
+    starMesh2.rotation.x = Math.PI / 2;
+    starMesh2.position.z = 0.15;
+    starGroup.add(starMesh2);
+
+    // Inner glow sphere
+    const innerGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 12, 12),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffcc00, emissiveIntensity: 8, transparent: true, opacity: 0.7 })
+    );
+    starGroup.add(innerGlow);
+
+    starGroup.position.y = 14.1;
     scene.add(starGroup);
 
-    // === Tree ===
+    // ─── Tree group ────────────────────────────────────────────
     const tree = new THREE.Group();
 
-    // Trunk
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.9, metalness: 0.1 });
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.5, 2.0, 14), trunkMat);
-    trunk.position.y = 1.0;
+    // ── Trunk with bark texture ──
+    const trunkGeo = new THREE.CylinderGeometry(0.30, 0.55, 2.2, 16);
+    addBarkNoise(trunkGeo, 0.06);
+    const trunkMat = new THREE.MeshStandardMaterial({
+      color: 0x5c3317, roughness: 0.95, metalness: 0.05
+    });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 1.1;
     trunk.castShadow = true;
+    trunk.receiveShadow = true;
     tree.add(trunk);
 
-    // Tree layers - 7 layers with varying cone sizes
-    const treeMats = [
-      new THREE.MeshStandardMaterial({ color: 0x1a5c1a, roughness: 0.92, side: THREE.DoubleSide }),
-      new THREE.MeshStandardMaterial({ color: 0x2d7a2d, roughness: 0.92, side: THREE.DoubleSide }),
-      new THREE.MeshStandardMaterial({ color: 0x3d8b3d, roughness: 0.92, side: THREE.DoubleSide }),
-      new THREE.MeshStandardMaterial({ color: 0x2d7a2d, roughness: 0.92, side: THREE.DoubleSide }),
-      new THREE.MeshStandardMaterial({ color: 0x1a5c1a, roughness: 0.92, side: THREE.DoubleSide }),
-      new THREE.MeshStandardMaterial({ color: 0x3d8b3d, roughness: 0.92, side: THREE.DoubleSide }),
-      new THREE.MeshStandardMaterial({ color: 0x2d7a2d, roughness: 0.92, side: THREE.DoubleSide }),
+    // ── Wooden tree stand ──
+    const standMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.85, metalness: 0.1 });
+    // Main cup
+    const standCup = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 0.8, 12), standMat);
+    standCup.position.y = 0.4;
+    standCup.castShadow = true;
+    tree.add(standCup);
+    // Three legs
+    for (let i = 0; i < 3; i++) {
+      const angle = (i / 3) * Math.PI * 2;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.0, 8), standMat);
+      leg.position.set(Math.cos(angle) * 0.5, -0.1, Math.sin(angle) * 0.5);
+      leg.rotation.z = Math.cos(angle) * 0.35;
+      leg.rotation.x = Math.sin(angle) * 0.35;
+      leg.castShadow = true;
+      tree.add(leg);
+    }
+    // Metal ring at top of stand
+    const ringGeo = new THREE.TorusGeometry(0.65, 0.04, 8, 24);
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x888877, roughness: 0.3, metalness: 0.9 });
+    const ring = new THREE.Mesh(ringGeo, metalMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.78;
+    tree.add(ring);
+
+    // ── Natural branch layers (not cones) ──
+    function createBranchLayer(baseY, baseR, branchCount, droopFactor) {
+      const layerGroup = new THREE.Group();
+      const branchMatL = new THREE.MeshStandardMaterial({ color: 0x1a5c1a, roughness: 0.88 });
+
+      for (let i = 0; i < branchCount; i++) {
+        const angle = (i / branchCount) * Math.PI * 2 + Math.random() * 0.3;
+        const r = baseR * (0.75 + Math.random() * 0.35);
+        const x = Math.cos(angle) * r;
+        const z = Math.sin(angle) * r;
+
+        // Main branch — tapered cylinder with slight curve
+        const brLen = baseR * 0.7 * (0.6 + Math.random() * 0.4);
+        const brGeo = new THREE.CylinderGeometry(0.02, 0.09, brLen, 6);
+        // Slightly curve the branch by offsetting vertices
+        const bPos = brGeo.attributes.position;
+        for (let v = 0; v < bPos.count; v++) {
+          const yFrac = (bPos.getY(v) + brLen / 2) / brLen;
+          bPos.setX(v, bPos.getX(v) + yFrac * 0.15 * (Math.random() - 0.5));
+          bPos.setZ(v, bPos.getZ(v) + yFrac * 0.15 * (Math.random() - 0.5));
+        }
+        bPos.needsUpdate = true;
+        brGeo.computeVertexNormals();
+
+        const branch = new THREE.Mesh(brGeo, branchMatL.clone());
+        branch.position.set(x, baseY, z);
+        branch.rotation.z = Math.cos(angle) * droopFactor;
+        branch.rotation.x = Math.sin(angle) * droopFactor;
+        branch.castShadow = true;
+        layerGroup.add(branch);
+
+        // Sub-branches (twigs) coming off main branch
+        for (let j = 0; j < 3; j++) {
+          const subLen = brLen * 0.35 * (0.5 + Math.random() * 0.5);
+          const subGeo = new THREE.CylinderGeometry(0.01, 0.04, subLen, 4);
+          const subAngle = angle + (j - 1) * 0.7 + Math.random() * 0.3;
+          const subBranch = new THREE.Mesh(subGeo, branchMatL.clone());
+          subBranch.position.set(
+            x + Math.cos(subAngle) * brLen * 0.5,
+            baseY + subLen * 0.3,
+            z + Math.sin(subAngle) * brLen * 0.5
+          );
+          subBranch.rotation.z = Math.cos(subAngle) * droopFactor * 1.4;
+          subBranch.rotation.x = Math.sin(subAngle) * droopFactor * 1.4;
+          layerGroup.add(subBranch);
+        }
+
+        // Snow on branch tip
+        const snowTip = new THREE.Mesh(
+          new THREE.SphereGeometry(0.18 + Math.random() * 0.12, 8, 8),
+          new THREE.MeshStandardMaterial({ color: 0xe8f4ff, roughness: 0.4, transparent: true, opacity: 0.88 })
+        );
+        snowTip.scale.y = 0.5;
+        snowTip.position.set(
+          x + Math.cos(angle) * brLen * 0.9,
+          baseY + brLen * droopFactor * 0.4 + 0.1,
+          z + Math.sin(angle) * brLen * 0.9
+        );
+        layerGroup.add(snowTip);
+      }
+
+      // Foliage cluster puffs between branches
+      const foliageMat = new THREE.MeshStandardMaterial({ color: 0x2d7a2d, roughness: 0.9, transparent: true, opacity: 0.95 });
+      for (let k = 0; k < branchCount * 2; k++) {
+        const fa = (k / (branchCount * 2)) * Math.PI * 2 + Math.random() * 0.5;
+        const fr = baseR * (0.4 + Math.random() * 0.5);
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(0.6 + Math.random() * 0.5, 8, 8),
+          foliageMat.clone()
+        );
+        puff.position.set(Math.cos(fa) * fr, baseY + (Math.random() - 0.5) * 1.2, Math.sin(fa) * fr);
+        puff.scale.y = 0.7 + Math.random() * 0.3;
+        puff.castShadow = true;
+        layerGroup.add(puff);
+      }
+
+      return layerGroup;
+    }
+
+    const branchLayers = [
+      { y: 2.8, r: 4.2, count: 14, droop: 0.55 },
+      { y: 5.2, r: 3.4, count: 12, droop: 0.50 },
+      { y: 7.4, r: 2.6, count: 10, droop: 0.45 },
+      { y: 9.4, r: 2.0, count: 8,  droop: 0.42 },
+      { y: 11.0, r: 1.4, count: 7,  droop: 0.38 },
+      { y: 12.5, r: 0.9, count: 5,  droop: 0.35 },
+      { y: 13.8, r: 0.5, count: 4,  droop: 0.30 },
     ];
 
-    const layers = [
-      { r: 4.0, h: 4.0, y: 3.0 },
-      { r: 3.2, h: 3.6, y: 6.2 },
-      { r: 2.5, h: 3.0, y: 8.9 },
-      { r: 1.9, h: 2.6, y: 11.2 },
-      { r: 1.3, h: 2.0, y: 13.0 },
-      { r: 0.8, h: 1.4, y: 14.3 },
-      { r: 0.4, h: 0.9, y: 15.2 },
-    ];
+    branchLayers.forEach(l => tree.add(createBranchLayer(l.y, l.r, l.count, l.droop)));
 
-    layers.forEach((l, i) => {
-      const offset = i % 2 === 0 ? 0 : 0.15;
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(l.r, l.h, 20), treeMats[i]);
-      cone.position.y = l.y + offset;
-      cone.position.z = offset * 0.3;
-      cone.castShadow = true;
-      tree.add(cone);
+    // ── Icicles hanging from branches ──
+    function createIcicle(parent, x, y, z, length) {
+      const icicleGeo = new THREE.ConeGeometry(0.04, length, 6);
+      // Taper the icicle
+      const ip = icicleGeo.attributes.position;
+      for (let i = 0; i < ip.count; i++) {
+        const yF = (ip.getY(i) + length / 2) / length;
+        ip.setX(i, ip.getX(i) * (1 - yF * 0.7));
+        ip.setZ(i, ip.getZ(i) * (1 - yF * 0.7));
+      }
+      ip.needsUpdate = true;
+      icicleGeo.computeVertexNormals();
 
-      // Snow caps
-      const snowCap = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.35),
-        new THREE.MeshStandardMaterial({ color: 0xe8f4ff, roughness: 0.5, transparent: true, opacity: 0.92 })
+      const icicleMat = new THREE.MeshStandardMaterial({
+        color: 0xddeeff, roughness: 0.05, metalness: 0.1,
+        transparent: true, opacity: 0.75
+      });
+      const icicle = new THREE.Mesh(icicleGeo, icicleMat);
+      icicle.position.set(x, y - length / 2, z);
+      icicle.castShadow = false;
+      parent.add(icicle);
+    }
+
+    // Add icicles to lower branch layers
+    for (let i = 0; i < 60; i++) {
+      const layer = branchLayers[Math.floor(Math.random() * 3)];
+      const angle = Math.random() * Math.PI * 2;
+      const r = layer.r * (0.5 + Math.random() * 0.45);
+      const brLen = layer.r * 0.7 * 0.6;
+      createIcicle(tree,
+        Math.cos(angle) * r,
+        layer.y + brLen * layer.droop * 0.3,
+        Math.sin(angle) * r,
+        0.3 + Math.random() * 0.6
       );
-      snowCap.scale.set(l.r * 1.3, l.r * 0.35, l.r * 1.3);
-      snowCap.position.y = l.y + l.h * 0.45 + 0.1;
-      tree.add(snowCap);
-    });
+    }
 
-    // === Hanging branches (drooping) ===
-    const branchMat = new THREE.MeshStandardMaterial({ color: 0x1a4c1a, roughness: 0.9 });
-    const branchPositions = [
-      [2.5, 4, 1], [-2.2, 4.2, 1.2], [1, 3.8, -2.5], [-1.5, 4.5, -2],
-      [3, 5.5, 0.5], [-2.8, 5.8, 0.8], [2, 6.5, -1.5], [-1.8, 6.8, 1.2],
-      [1.5, 7.5, 2], [-1.2, 7.8, -1.8], [0.8, 8.5, 1.5], [-0.6, 9, -1.2],
-      [1, 10, 0.8], [-0.8, 10.5, 0.5],
-    ];
-    branchPositions.forEach(([x, y, z]) => {
-      const branch = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.06, 1.5 + Math.random() * 0.5, 6),
-        branchMat
-      );
-      branch.position.set(x, y, z);
-      branch.rotation.z = (Math.random() - 0.5) * 0.6;
-      branch.rotation.x = (Math.random() - 0.5) * 0.4;
-      tree.add(branch);
-    });
-
-    // === Colorful ornament balls ===
-    const ballCols = [0xff4444, 0x4488ff, 0xffdd00, 0xcc44ff, 0x00ccff, 0xff8844, 0x44ff88];
-    const ballMats = ballCols.map(c => new THREE.MeshStandardMaterial({
-      color: c, emissive: c, emissiveIntensity: 0.4,
-      roughness: 0.15, metalness: 0.8
+    // ── Ornaments ──
+    const ballCols = [0xff3333, 0x3377ff, 0xffcc00, 0xcc33ff, 0x00ccff, 0xff7733, 0x33ff88, 0xff5588];
+    const ballEnvMats = ballCols.map(c => new THREE.MeshStandardMaterial({
+      color: c, emissive: c, emissiveIntensity: 0.6,
+      roughness: 0.08, metalness: 0.9
     }));
 
-    const ballPositions = [
-      [2.5, 3.5, 1.5], [-2.3, 3.8, 1.2], [1.2, 3.2, 2.8], [-1.8, 4, 2.5],
-      [3, 3.8, -0.8], [-2.8, 3.5, -1], [0.5, 3.0, 3.2], [-0.8, 4.2, 2.8],
-      [2.8, 4.5, 0.5], [-2.5, 4.8, 0.3],
-      [1.8, 6.5, 1.5], [-1.5, 6.8, 1.8], [0.8, 6.2, 2.5], [-1.2, 7, -1.8],
-      [2.2, 6.8, -1.2], [-1.8, 6.5, 0.5],
-      [1.3, 9.2, 1.2], [-1.0, 9.5, 1.0], [0.5, 8.9, 2.0], [-0.8, 9.8, -1.0],
-      [1.5, 9.0, -1.5], [-1.2, 9.3, 0.8],
-      [0.9, 11.5, 0.8], [-0.7, 11.8, 0.6], [0.4, 11.2, 1.5], [-0.5, 12, -0.5],
-      [1.0, 11.3, -1.0], [-0.8, 11.6, 0.9],
-      [0.5, 13.3, 0.5], [-0.4, 13.5, 0.4], [0.3, 13.1, 1.0], [-0.3, 13.7, -0.3],
-      [0.3, 14.5, 0.3], [-0.2, 14.6, 0.2],
+    const ornamentPositions = [
+      // Lower layer
+      [2.8, 3.2, 1.6], [-2.5, 3.5, 1.4], [1.4, 2.9, 3.0], [-2.0, 3.8, 2.6],
+      [3.2, 3.6, -0.6], [-3.0, 3.3, -1.1], [0.6, 2.8, 3.4], [-1.0, 4.1, 2.9],
+      [2.9, 4.2, 0.4], [-2.6, 4.5, 0.2],
+      // Middle-lower
+      [2.0, 6.2, 1.6], [-1.7, 6.5, 1.9], [0.9, 5.9, 2.7], [-1.3, 6.8, -1.9],
+      [2.4, 6.5, -1.3], [-2.0, 6.3, 0.6],
+      // Middle
+      [1.5, 8.5, 1.3], [-1.2, 8.8, 1.1], [0.6, 8.2, 2.2], [-1.0, 9.1, -1.1],
+      [1.8, 8.7, -1.6], [-1.5, 8.9, 0.9],
+      // Upper
+      [1.1, 10.5, 0.9], [-0.9, 10.8, 0.7], [0.5, 10.2, 1.6], [-0.7, 11.0, -0.6],
+      [1.0, 10.6, -1.1], [-0.8, 10.9, 0.8],
+      // Top
+      [0.7, 12.2, 0.6], [-0.5, 12.4, 0.5], [0.4, 12.0, 1.0], [-0.4, 12.6, -0.4],
+      [0.5, 13.3, 0.4], [-0.3, 13.5, 0.3],
     ];
 
     const balls = [];
-    ballPositions.forEach(([x, y, z], i) => {
-      const r = 0.12 + Math.random() * 0.1;
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), ballMats[i % ballMats.length].clone());
-      ball.position.set(x + (Math.random() - 0.5) * 0.3, y + (Math.random() - 0.5) * 0.2, z + (Math.random() - 0.5) * 0.3);
+    ornamentPositions.forEach(([x, y, z], i) => {
+      const r = 0.13 + Math.random() * 0.09;
+      const mat = ballEnvMats[i % ballEnvMats.length].clone();
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 16), mat);
+      ball.position.set(x + (Math.random() - 0.5) * 0.4, y + (Math.random() - 0.5) * 0.25, z + (Math.random() - 0.5) * 0.4);
       ball.castShadow = true;
       balls.push(ball);
       tree.add(ball);
     });
 
-    // === Twinkling lights string ===
-    const lightBulbCols = [0xffffaa, 0xffffee, 0xaaffee, 0xffaaff, 0xaabbff];
+    // ── Twinkling string lights ──
+    const lightCols = [0xffffaa, 0xffffee, 0xaaffee, 0xffaaff, 0xaabbff, 0xffeeaa];
     const lightBulbs = [];
 
-    for (let layer = 0; layer < 6; layer++) {
-      const yBase = 3.5 + layer * 1.8;
-      const rBase = 2.8 - layer * 0.4;
-      const count = 8 + layer * 4;
+    for (let layer = 0; layer < 7; layer++) {
+      const yBase = 3.0 + layer * 1.5;
+      const rBase = 3.5 - layer * 0.45;
+      const count = 10 + layer * 3;
       for (let j = 0; j < count; j++) {
-        const angle = (j / count) * Math.PI * 2 + layer * 0.5;
-        const r = rBase + (Math.random() - 0.5) * 0.3;
+        const angle = (j / count) * Math.PI * 2 + layer * 0.6;
+        const r = rBase + (Math.random() - 0.5) * 0.4;
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
-        const y = yBase + (Math.random() - 0.5) * 0.5;
-        const col = lightBulbCols[Math.floor(Math.random() * lightBulbCols.length)];
+        const y = yBase + (Math.random() - 0.5) * 0.6;
+        const col = lightCols[Math.floor(Math.random() * lightCols.length)];
         const bulbMat = new THREE.MeshStandardMaterial({
-          color: col, emissive: col, emissiveIntensity: 3.0,
-          transparent: true, opacity: 0.9
+          color: col, emissive: col, emissiveIntensity: 4.0,
+          transparent: true, opacity: 0.85
         });
-        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), bulbMat);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), bulbMat);
         bulb.position.set(x, y, z);
-        lightBulbs.push({ bulb, baseIntensity: 3.0, phase: Math.random() * Math.PI * 2 });
+        lightBulbs.push({ bulb, baseIntensity: 4.0, phase: Math.random() * Math.PI * 2 });
         tree.add(bulb);
       }
     }
 
-    // === Gift boxes at base ===
+    // ── Gift boxes ──
     const giftData = [
-      { x: -1.2, z: 0.8, s: 0.5, col: 0xcc2222, rib: 0xffdd00 },
-      { x: 1.5, z: 1.0, s: 0.4, col: 0x2255cc, rib: 0xff88ff },
-      { x: -0.3, z: 1.5, s: 0.6, col: 0x228844, rib: 0xffdd44 },
-      { x: 2.0, z: 0.5, s: 0.35, col: 0x882288, rib: 0x88ffff },
-      { x: -1.8, z: 0.3, s: 0.45, col: 0xdd8822, rib: 0xffffff },
+      { x: -1.4, z: 1.0, s: 0.55, col: 0xcc2222, rib: 0xffdd00 },
+      { x: 1.7,  z: 1.2, s: 0.42, col: 0x2255cc, rib: 0xff88ff },
+      { x: -0.4, z: 1.7, s: 0.65, col: 0x228844, rib: 0xffdd44 },
+      { x: 2.2,  z: 0.7, s: 0.38, col: 0x882288, rib: 0x88ffff },
+      { x: -2.0, z: 0.5, s: 0.48, col: 0xdd8822, rib: 0xffffff },
+      { x: 0.6,  z: 2.0, s: 0.30, col: 0x22aa55, rib: 0xffaaff },
     ];
     giftData.forEach(g => {
-      const boxMat = new THREE.MeshStandardMaterial({ color: g.col, roughness: 0.7 });
+      const boxMat = new THREE.MeshStandardMaterial({ color: g.col, roughness: 0.7, metalness: 0.1 });
       const box = new THREE.Mesh(new THREE.BoxGeometry(g.s, g.s, g.s), boxMat);
       box.position.set(g.x, g.s / 2, g.z);
+      box.rotation.y = (Math.random() - 0.5) * 0.3;
       box.castShadow = true;
+      box.receiveShadow = true;
       tree.add(box);
-      const ribMat = new THREE.MeshStandardMaterial({ color: g.rib, metalness: 0.6, roughness: 0.3 });
-      const ribH = new THREE.Mesh(new THREE.BoxGeometry(g.s + 0.01, g.s * 0.12, g.s * 0.12), ribMat);
+      const ribMat = new THREE.MeshStandardMaterial({ color: g.rib, metalness: 0.5, roughness: 0.3 });
+      const ribH = new THREE.Mesh(new THREE.BoxGeometry(g.s + 0.01, g.s * 0.1, g.s * 0.1), ribMat);
       ribH.position.set(g.x, g.s / 2 + 0.01, g.z);
       tree.add(ribH);
-      const ribV = new THREE.Mesh(new THREE.BoxGeometry(g.s * 0.12, g.s * 0.12, g.s + 0.01), ribMat);
+      const ribV = new THREE.Mesh(new THREE.BoxGeometry(g.s * 0.1, g.s * 0.1, g.s + 0.01), ribMat);
       ribV.position.set(g.x, g.s / 2 + 0.01, g.z);
       tree.add(ribV);
-      const bow = new THREE.Mesh(new THREE.SphereGeometry(g.s * 0.15, 8, 8), ribMat);
-      bow.position.set(g.x, g.s + g.s * 0.1, g.z);
+      const bow = new THREE.Mesh(new THREE.SphereGeometry(g.s * 0.18, 8, 8), ribMat);
+      bow.position.set(g.x, g.s + g.s * 0.12, g.z);
       tree.add(bow);
     });
 
-    // === Ground snow ===
-    const snowMat = new THREE.MeshStandardMaterial({ color: 0xe8f4ff, roughness: 0.5, transparent: true, opacity: 0.92 });
-    const ground = new THREE.Mesh(new THREE.CylinderGeometry(10, 10, 0.15, 40), snowMat);
-    ground.position.y = -0.08;
+    scene.add(tree);
+
+    // ─── Ground snow with better mounds ───────────────────────
+    const snowMat = new THREE.MeshStandardMaterial({
+      color: 0xe8f4ff, roughness: 0.45, transparent: true, opacity: 0.93
+    });
+    const ground = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 0.18, 48), snowMat);
+    ground.position.y = -0.09;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Snow mounds
-    for (let i = 0; i < 16; i++) {
-      const angle = (i / 16) * Math.PI * 2;
-      const r = 4 + Math.random() * 5;
-      const mound = new THREE.Mesh(new THREE.SphereGeometry(0.6 + Math.random() * 0.7, 12, 12), snowMat.clone());
-      mound.scale.y = 0.38;
-      mound.position.set(Math.cos(angle) * r, 0.12, Math.sin(angle) * r);
+    // Snow mounds in a natural scattered pattern
+    const moundPositions = [];
+    for (let i = 0; i < 24; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = 3 + Math.random() * 7.5;
+      moundPositions.push({
+        x: Math.cos(angle) * r,
+        z: Math.sin(angle) * r,
+        r: 0.5 + Math.random() * 1.0,
+        sy: 0.3 + Math.random() * 0.25
+      });
+    }
+    moundPositions.forEach(m => {
+      const mound = new THREE.Mesh(new THREE.SphereGeometry(m.r, 14, 14), snowMat.clone());
+      mound.scale.y = m.sy;
+      mound.position.set(m.x, m.sy * m.r * 0.5, m.z);
       mound.receiveShadow = true;
       scene.add(mound);
+    });
+
+    // Snow mounds near the tree (under branches)
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.4;
+      const r = 2.5 + Math.random() * 1.5;
+      const mound2 = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4 + Math.random() * 0.5, 12, 12),
+        snowMat.clone()
+      );
+      mound2.scale.y = 0.35;
+      mound2.position.set(Math.cos(angle) * r, 0.15, Math.sin(angle) * r);
+      mound2.receiveShadow = true;
+      scene.add(mound2);
     }
 
-    // === Background stars ===
+    // ─── Background stars ─────────────────────────────────────
     const bgGeo = new THREE.BufferGeometry();
-    const bgPos = new Float32Array(2500 * 3);
-    for (let i = 0; i < 2500; i++) {
+    const bgPos = new Float32Array(3000 * 3);
+    for (let i = 0; i < 3000; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       const r = 100 + Math.random() * 30;
       bgPos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
-      bgPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.5 + 10;
+      bgPos[i*3+1] = Math.abs(r * Math.cos(phi)) * 0.5 + 12;
       bgPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
     }
     bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
@@ -294,54 +476,55 @@
       color: 0xffffff, size: 0.4, transparent: true, opacity: 0.85
     })));
 
-    // === Snowflakes ===
-    const SNOW = 5000;
+    // ─── Falling snowflakes ────────────────────────────────────
+    const SNOW = 6000;
     const snowGeo2 = new THREE.BufferGeometry();
-    const snowPos = new Float32Array(SNOW * 3);
+    const snowPos2 = new Float32Array(SNOW * 3);
     const snowPh = new Float32Array(SNOW);
     for (let i = 0; i < SNOW; i++) {
-      snowPos[i*3]   = (Math.random() - 0.5) * 60;
-      snowPos[i*3+1] = Math.random() * 35;
-      snowPos[i*3+2] = (Math.random() - 0.5) * 60;
+      snowPos2[i*3]   = (Math.random() - 0.5) * 70;
+      snowPos2[i*3+1] = Math.random() * 38;
+      snowPos2[i*3+2] = (Math.random() - 0.5) * 70;
       snowPh[i] = Math.random() * Math.PI * 2;
     }
-    snowGeo2.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+    snowGeo2.setAttribute('position', new THREE.BufferAttribute(snowPos2, 3));
     scene.add(new THREE.Points(snowGeo2, new THREE.PointsMaterial({
-      color: 0xdeeeff, size: 0.15, transparent: true, opacity: 0.8,
+      color: 0xdeeeff, size: 0.18, transparent: true, opacity: 0.85,
       sizeAttenuation: true, depthWrite: false
     })));
 
-    scene.add(tree);
-
-    // === Animation ===
+    // ─── Animation ─────────────────────────────────────────────
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
 
-      starGroup.rotation.y += 0.008;
-      starGlow.intensity = 3 + Math.sin(t * 2) * 1.5;
-      starMat.emissiveIntensity = 5 + Math.sin(t * 3) * 2;
+      starGroup.rotation.y += 0.012;
+      starGroup.rotation.z = Math.sin(t * 0.8) * 0.08;
+      starGlow.intensity = 5 + Math.sin(t * 2.5) * 2.5;
+      starMat.emissiveIntensity = 6 + Math.sin(t * 3) * 3;
+      innerGlow.material.emissiveIntensity = 8 + Math.sin(t * 4) * 4;
 
-      tree.rotation.z = Math.sin(t * 0.3) * 0.03;
+      warmGlow.intensity = 4 + Math.sin(t * 1.5) * 1.5;
+      tree.rotation.z = Math.sin(t * 0.25) * 0.025;
 
       balls.forEach((b, i) => {
-        b.material.emissiveIntensity = 0.4 + Math.sin(t * 3 + i * 0.5 + b.position.y * 0.5) * 0.6;
+        b.material.emissiveIntensity = 0.6 + Math.sin(t * 3.5 + i * 0.6 + b.position.y * 0.5) * 0.8;
       });
 
-      lightBulbs.forEach(({ bulb, baseIntensity, phase }, i) => {
-        bulb.material.emissiveIntensity = baseIntensity * (0.6 + Math.sin(t * 4 + phase) * 0.4);
+      lightBulbs.forEach(({ bulb, baseIntensity, phase }) => {
+        bulb.material.emissiveIntensity = baseIntensity * (0.5 + Math.sin(t * 5 + phase) * 0.5);
       });
 
       const pos = snowGeo2.attributes.position.array;
       for (let i = 0; i < SNOW; i++) {
-        pos[i*3+1] -= 0.014 + Math.sin(t * 0.4 + snowPh[i]) * 0.005;
-        pos[i*3]   += Math.sin(t * 0.3 + snowPh[i]) * 0.004;
+        pos[i*3+1] -= 0.016 + Math.sin(t * 0.4 + snowPh[i]) * 0.006;
+        pos[i*3]   += Math.sin(t * 0.3 + snowPh[i]) * 0.005;
         if (pos[i*3+1] < -1) {
-          pos[i*3+1] = 32;
-          pos[i*3]   = (Math.random() - 0.5) * 60;
-          pos[i*3+2] = (Math.random() - 0.5) * 60;
+          pos[i*3+1] = 36;
+          pos[i*3]   = (Math.random() - 0.5) * 70;
+          pos[i*3+2] = (Math.random() - 0.5) * 70;
         }
       }
       snowGeo2.attributes.position.needsUpdate = true;
