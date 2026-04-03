@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent UI - AI Agent Execution Visualizer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg-primary:#0a0e17;--bg-secondary:#111827;--bg-card:#1a2235;--accent-cyan:#00d4ff;--accent-purple:#a855f7;--accent-green:#10b981;--accent-yellow:#f59e0b;--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--border-color:#2d3a52;--glow-cyan:0 0 20px rgba(0,212,255,0.3);--glow-purple:0 0 20px rgba(168,85,247,0.3)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+    #bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+    .container{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:40px 20px}
+    .header{text-align:center;margin-bottom:50px}
+    .header h1{font-size:2.5rem;font-weight:700;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+    .header p{color:var(--text-secondary);font-size:1.1rem}
+    .demo-badge{display:inline-block;padding:6px 16px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));border-radius:20px;font-size:0.85rem;font-weight:600;margin-top:15px;animation:pulse-glow 2s ease-in-out infinite}
+    @keyframes pulse-glow{0%,100%{box-shadow:0 0 10px rgba(0,212,255,0.3)}50%{box-shadow:0 0 25px rgba(0,212,255,0.6)}}
+    .progress-tracker{display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:50px;flex-wrap:wrap}
+    .progress-step{display:flex;align-items:center;gap:10px;padding:12px 20px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;transition:all 0.3s ease;opacity:0.4}
+    .progress-step.active{opacity:1;border-color:var(--accent-cyan);box-shadow:var(--glow-cyan);background:rgba(0,212,255,0.1)}
+    .progress-step.completed{opacity:0.8;border-color:var(--accent-green)}
+    .progress-step .step-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;background:var(--bg-secondary);border:2px solid var(--border-color);transition:all 0.3s ease}
+    .progress-step.active .step-icon{border-color:var(--accent-cyan);background:var(--accent-cyan);color:var(--bg-primary)}
+    .progress-step.completed .step-icon{border-color:var(--accent-green);background:var(--accent-green);color:var(--bg-primary)}
+    .progress-step .step-label{font-size:0.9rem;font-weight:500}
+    .progress-connector{width:40px;height:2px;background:var(--border-color);transition:background 0.5s ease}
+    .progress-connector.active{background:linear-gradient(90deg,var(--accent-cyan),var(--accent-purple))}
+    .main-layout{display:grid;grid-template-columns:1fr 1fr;gap:30px}
+    @media(max-width:900px){.main-layout{grid-template-columns:1fr}}
+    .panel{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;overflow:hidden;transition:all 0.3s ease}
+    .panel:hover{border-color:rgba(0,212,255,0.3)}
+    .panel-header{display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--border-color);background:rgba(0,0,0,0.2)}
+    .panel-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .panel-icon.timeline{background:linear-gradient(135deg,var(--accent-cyan),#0891b2)}
+    .panel-icon.tools{background:linear-gradient(135deg,var(--accent-purple),#7c3aed)}
+    .panel-icon.message{background:linear-gradient(135deg,var(--accent-green),#059669)}
+    .panel-title{font-size:1.1rem;font-weight:600}
+    .panel-content{padding:24px;max-height:500px;overflow-y:auto}
+    .panel-content::-webkit-scrollbar{width:6px}
+    .panel-content::-webkit-scrollbar-track{background:var(--bg-secondary)}
+    .panel-content::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:3px}
+    .timeline{position:relative;padding-left:30px}
+    .timeline::before{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--border-color)}
+    .timeline-item{position:relative;margin-bottom:24px;opacity:0;transform:translateX(-20px);animation:slide-in 0.4s ease forwards}
+    .timeline-item:last-child{margin-bottom:0}
+    @keyframes slide-in{to{opacity:1;transform:translateX(0)}}
+    .timeline-dot{position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--bg-secondary);border:2px solid var(--border-color);transition:all 0.3s ease}
+    .timeline-item.active .timeline-dot{background:var(--accent-cyan);border-color:var(--accent-cyan);box-shadow:0 0 12px var(--accent-cyan)}
+    .timeline-item.completed .timeline-dot{background:var(--accent-green);border-color:var(--accent-green)}
+    .timeline-content{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:16px;transition:all 0.3s ease}
+    .timeline-item.active .timeline-content{border-color:var(--accent-cyan);background:rgba(0,212,255,0.05)}
+    .timeline-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .timeline-title{font-weight:600;font-size:0.95rem;display:flex;align-items:center;gap:8px}
+    .timeline-time{font-size:0.75rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+    .timeline-desc{font-size:0.85rem;color:var(--text-secondary);line-height:1.5}
+    .timeline-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:12px;font-size:0.75rem;font-weight:500;margin-top:10px}
+    .timeline-status.pending{background:rgba(245,158,11,0.15);color:var(--accent-yellow)}
+    .timeline-status.running{background:rgba(0,212,255,0.15);color:var(--accent-cyan}
+    .timeline-status.success{background:rgba(16,185,129,0.15);color:var(--accent-green)}
+    .tool-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;margin-bottom:16px;overflow:hidden;opacity:0;transform:translateY(20px);animation:fade-up 0.4s ease forwards}
+    .tool-card:last-child{margin-bottom:0}
+    @keyframes fade-up{to{opacity:1;transform:translateY(0)}}
+    .tool-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px;cursor:pointer;transition:background 0.2s ease}
+    .tool-card-header:hover{background:rgba(255,255,255,0.03)}
+    .tool-info{display:flex;align-items:center;gap:12px}
+    .tool-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .tool-icon.terminal{background:linear-gradient(135deg,var(--accent-yellow),#d97706)}
+    .tool-icon.file{background:linear-gradient(135deg,var(--accent-cyan),#0891b2)}
+    .tool-icon.code{background:linear-gradient(135deg,var(--accent-green),#059669)}
+    .tool-icon.search{background:linear-gradient(135deg,var(--accent-purple),#7c3aed)}
+    .tool-name{font-weight:600;font-size:0.95rem}
+    .tool-type{font-size:0.75rem;color:var(--text-muted);margin-top:2px}
+    .tool-meta{display:flex;align-items:center;gap:12px}
+    .tool-duration{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text-secondary);background:var(--bg-card);padding:4px 10px;border-radius:6px}
+    .tool-status{width:10px;height:10px;border-radius:50%;animation:status-pulse 1.5s ease-in-out infinite}
+    .tool-status.success{background:var(--accent-green)}
+    .tool-status.running{background:var(--accent-cyan)}
+    @keyframes status-pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+    .tool-expand{font-size:12px;color:var(--text-muted);transition:transform 0.3s ease}
+    .tool-card.expanded .tool-expand{transform:rotate(180deg)}
+    .tool-card-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border-color)}
+    .tool-card.expanded .tool-card-body{display:block}
+    .tool-section{margin-top:16px}
+    .tool-section-title{font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+    .tool-params,.tool-result{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
+    .tool-params{color:var(--accent-cyan)}
+    .tool-result{color:var(--accent-green)}
+    .message-container{display:flex;flex-direction:column;gap:16px}
+    .message{padding:16px;border-radius:12px;opacity:0;transform:translateY(10px);animation:message-in 0.4s ease forwards}
+    @keyframes message-in{to{opacity:1;transform:translateY(0)}}
+    .message.user{background:var(--bg-secondary);border:1px solid var(--border-color)}
+    .message.ai{background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(168,85,247,0.1));border:1px solid rgba(168,85,247,0.3)}
+    .message-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .message-avatar{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+    .message.user .message-avatar{background:var(--accent-cyan)}
+    .message.ai .message-avatar{background:var(--accent-purple)}
+    .message-label{font-size:0.85rem;font-weight:600}
+    .message.user .message-label{color:var(--accent-cyan)}
+    .message.ai .message-label{color:var(--accent-purple)}
+    .message-content{font-size:0.9rem;line-height:1.7;color:var(--text-primary)}
+    .message-content .cursor{display:inline-block;width:2px;height:1em;background:var(--accent-cyan);margin-left:2px;animation:blink 0.8s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+    .controls{display:flex;justify-content:center;gap:16px;margin-top:40px}
+    .btn{padding:12px 28px;border-radius:10px;font-size:0.95rem;font-weight:600;cursor:pointer;border:none;transition:all 0.3s ease;display:flex;align-items:center;gap:8px}
+    .btn-primary{background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));color:white}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,255,0.3)}
+    .btn-secondary{background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-primary)}
+    .btn-secondary:hover{border-color:var(--accent-cyan);background:rgba(0,212,255,0.1)}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none!important}
+    .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:40px}
+    @media(max-width:600px){.stats-bar{grid-template-columns:repeat(2,1fr)}}
+    .stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:20px;text-align:center;transition:all 0.3s ease}
+    .stat-card:hover{border-color:var(--accent-cyan);transform:translateY(-2px)}
+    .stat-value{font-size:2rem;font-weight:700;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .stat-label{font-size:0.8rem;color:var(--text-muted);margin-top:4px}
+    .full-width{grid-column:1/-1}
+    .restart-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,14,23,0.9);display:none;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px)}
+    .restart-overlay.active{display:flex}
+    .restart-content{text-align:center;animation:pop-in 0.3s ease}
+    @keyframes pop-in{from{opacity:0;transform:scale(0.9)}to{opacity:1;transform:scale(1)}}
+    .restart-content h2{font-size:1.5rem;margin-bottom:10px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .restart-content p{color:var(--text-secondary);margin-bottom:20px}
+    .typing-indicator{display:inline-flex;gap:4px;margin-left:8px}
+    .typing-indicator span{width:6px;height:6px;border-radius:50%;background:var(--accent-cyan);animation:typing 1.4s ease-in-out infinite}
+    .typing-indicator span:nth-child(2){animation-delay:0.2s}
+    .typing-indicator span:nth-child(3){animation-delay:0.4s}
+    @keyframes typing{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-8px)}}
+  </style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="container">
+  <header class="header">
+    <h1>🤖 Agent Execution Visualizer</h1>
+    <p>Watch the AI agent think, plan, and execute in real-time</p>
+    <span class="demo-badge">🎬 Demo Mode Active</span>
+  </header>
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-value" id="stat-duration">0.0s</div><div class="stat-label">Total Duration</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-tools">0</div><div class="stat-label">Tools Called</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-steps">0</div><div class="stat-label">Steps Completed</div></div>
+    <div class="stat-card"><div class="stat-value" id="stat-tokens">0</div><div class="stat-label">Tokens Generated</div></div>
+  </div>
+  <div class="progress-tracker" id="progress-tracker">
+    <div class="progress-step" data-step="0"><div class="step-icon">📥</div><span class="step-label">收到消息</span></div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-step="1"><div class="step-icon">🔍</div><span class="step-label">分析类型</span></div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-step="2"><div class="step-icon">🛠️</div><span class="step-label">调用工具</span></div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-step="3"><div class="step-icon">⚙️</div><span class="step-label">执行中</span></div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-step="4"><div class="step-icon">📤</div><span class="step-label">返回结果</span></div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" data-step="5"><div class="step-icon">✅</div><span class="step-label">完成</span></div>
+  </div>
+  <div class="main-layout">
+    <div class="panel">
+      <div class="panel-header"><div class="panel-icon timeline">📊</div><span class="panel-title">Execution Timeline</span></div>
+      <div class="panel-content" id="timeline-panel"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><div class="panel-icon tools">🛠️</div><span class="panel-title">Tool Calls</span></div>
+      <div class="panel-content" id="tools-panel"></div>
+    </div>
+    <div class="panel full-width">
+      <div class="panel-header"><div class="panel-icon message">💬</div><span class="panel-title">Message Stream</span></div>
+      <div class="panel-content" id="message-panel"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn btn-primary" id="btn-restart"><span>🔄</span> Restart Demo</button>
+    <button class="btn btn-secondary" id="btn-speed"><span>⚡</span> Speed: 1x</button>
+  </div>
+</div>
+<div class="restart-overlay" id="restart-overlay">
+  <div class="restart-content">
+    <h2>🎉 Execution Complete!</h2>
+    <p>The demo has finished. Click below to run it again.</p>
+    <button class="btn btn-primary" id="btn-restart-overlay">▶️ Run Again</button>
+  </div>
+</div>
+<script>
+// Three.js Background
+(function(){
+  var canvas=document.getElementById('bg-canvas');
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,alpha:true,antialias:true});
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  var particleCount=500;
+  var geometry=new THREE.BufferGeometry();
+  var positions=new Float32Array(particleCount*3);
+  var colors=new Float32Array(particleCount*3);
+  for(var i=0;i<particleCount;i++){
+    positions[i*3]=(Math.random()-0.5)*50;
+    positions[i*3+1]=(Math.random()-0.5)*50;
+    positions[i*3+2]=(Math.random()-0.5)*50;
+    var c=Math.random()>0.5?new THREE.Color(0x00d4ff):new THREE.Color(0xa855f7);
+    colors[i*3]=c.r;colors[i*3+1]=c.g;colors[i*3+2]=c.b;
+  }
+  geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  var material=new THREE.PointsMaterial({size:0.05,vertexColors:true,transparent:true,opacity:0.6,sizeAttenuation:true});
+  var particles=new THREE.Points(geometry,material);
+  scene.add(particles);
+  camera.position.z=20;
+  var mx=0,my=0;
+  document.addEventListener('mousemove',function(e){mx=(e.clientX/window.innerWidth-0.5)*2;my=(e.clientY/window.innerHeight-0.5)*2;});
+  function animate(){requestAnimationFrame(animate);particles.rotation.y+=0.0003;particles.rotation.x+=0.0001;camera.position.x+=(mx*2-camera.position.x)*0.02;camera.position.y+=(-my*2-camera.position.y)*0.02;camera.lookAt(scene.position);renderer.render(scene,camera);}
+  animate();
+  window.addEventListener('resize',function(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+})();
+<script>
+var demoSequence={timeline:[
+  {title:'收到用户消息',desc:'分析消息内容，判断消息类型和意图',status:'pending'},
+  {title:'分析消息类型',desc:'识别为正式旨意，需要创建任务并分派',status:'pending'},
+  {title:'调用看板工具',desc:'查询当前任务看板状态，获取最新任务编号',status:'pending'},
+  {title:'创建新任务',desc:'生成任务ID:JJC-20250403-001，写入看板',status:'pending'},
+  {title:'任务分派',desc:'将任务转交给尚书省（中书省）处理',status:'pending'},
+  {title:'执行完成',desc:'任务已成功创建并分派，等待尚书省回奏',status:'pending'}
+],tools:[
+  {name:'kanban_update.py',type:'Python Script',icon:'terminal',duration:'234ms',status:'success',params:{id:'JJC-20250403-001',title:'审查项目健康度',state:'中书省'},result:{success:true,task_id:'JJC-20250403-001',created_at:'2024-04-03T14:30:22Z'}},
+  {name:'sessions_send',type:'Feishu API',icon:'file',duration:'567ms',status:'success',params:{target:'中书省',message:'📋 太子·旨意传达\n任务ID:JJC-20250403-001'},result:{success:true,message_id:'om_xxx123',delivered:true}},
+  {name:'progress_update',type:'Kanban API',icon:'code',duration:'123ms',status:'success',params:{task_id:'JJC-20250403-001',status:'in_progress',progress:'40%'},result:{success:true,updated:true}}
+],messages:[
+  {role:'user',content:'帮我全面审查一下三省六部项目的健康度，看看有什么问题需要解决。'},
+  {role:'ai',content:''}
+]};
+var currentStep=-1,speed=1,isRunning=false,startTime=null,toolIndex=0,messageIndex=0;
+var timelinePanel,toolsPanel,messagePanel,progressTracker,statDuration,statTools,statSteps,statTokens,restartOverlay;
+function delay(ms){return new Promise(function(r){setTimeout(r,ms/speed)});}
+function formatTime(){return new Date().toTimeString().split(' ')[0];}
+function updateProgress(step){
+  var steps=progressTracker.querySelectorAll('.progress-step');
+  var connectors=progressTracker.querySelectorAll('.progress-connector');
+  steps.forEach(function(s,i){s.classList.remove('active','completed');if(i<step)s.classList.add('completed');else if(i===step)s.classList.add('active');});
+  connectors.forEach(function(c,i){c.classList.toggle('active',i<step);});
+}
+function updateStats(){
+  if(startTime){var elapsed=(Date.now()-startTime)/1000;statDuration.textContent=elapsed.toFixed(1)+'s';}
+  statTools.textContent=toolIndex;
+  statSteps.textContent=Math.max(0,currentStep);
+  statTokens.textContent=Math.floor(Math.random()*500)+messageIndex*150;
+}
+function toggleTool(index){var card=document.getElementById('tool-'+index);if(card)card.classList.toggle('expanded');}
+function typewriterEffect(el,text){
+  return new Promise(function(res){
+    var i=0;
+    function type(){if(i<text.length){el.textContent+=text[i];if(text[i]==='\n')setTimeout(type,50);else setTimeout(type,30/speed);}else{el.textContent+='';res();}}
+    type();
+  });
+}
+
+async function runDemo(){
+  if(isRunning)return;
+  isRunning=true;
+  startTime=Date.now();
+  currentStep=-1;toolIndex=0;messageIndex=0;
+  timelinePanel.innerHTML='';toolsPanel.innerHTML='';messagePanel.innerHTML='';restartOverlay.classList.remove('active');
+  demoSequence.timeline.forEach(function(item,i){
+    var div=document.createElement('div');
+    div.className='timeline-item';
+    div.id='timeline-'+i;
+    div.innerHTML='<div class="timeline-dot"></div><div class="timeline-content"><div class="timeline-header"><span class="timeline-title">'+item.title+'</span><span class="timeline-time">--:--:--</span></div><div class="timeline-desc">'+item.desc+'</div><div class="timeline-status pending">⏳ 等待中</div></div>';
+    timelinePanel.appendChild(div);
+  });
+  var statsInterval=setInterval(updateStats,100);
+
+  // Step 0
+  currentStep=0;updateProgress(0);
+  var tlItem=document.getElementById('timeline-0');
+  tlItem.querySelector('.timeline-time').textContent=formatTime();
+  tlItem.classList.add('active');
+  tlItem.querySelector('.timeline-status').className='timeline-status running';
+  tlItem.querySelector('.timeline-status').textContent='🔄 执行中';
+  await delay(800);
+  var userMsg=document.createElement('div');
+  userMsg.className='message user';
+  userMsg.innerHTML='<div class="message-header"><div class="message-avatar">👤</div><span class="message-label">User</span></div><div class="message-content">'+demoSequence.messages[0].content+'</div>';
+  messagePanel.appendChild(userMsg);
+  await delay(600);
+  tlItem.classList.remove('active');
+  tlItem.classList.add('completed');
+  tlItem.querySelector('.timeline-status').className='timeline-status success';
+  tlItem.querySelector('.timeline-status').textContent='✅ 完成';
+
+  // Step 1
+  currentStep=1;updateProgress(1);
+  tlItem=document.getElementById('timeline-1');
+  tlItem.style.animationDelay='0s';
+  tlItem.querySelector('.timeline-time').textContent=formatTime();
+  tlItem.classList.add('active');
+  tlItem.querySelector('.timeline-status').className='timeline-status running';
+  tlItem.querySelector('.timeline-status').textContent='🔄 执行中';
+  await delay(1000);
+  var aiMsg=document.createElement('div');
+  aiMsg.className='message ai';
+  aiMsg.innerHTML='<div class="message-header"><div class="message-avatar">🤖</div><span class="message-label">Agent</span><div class="typing-indicator"><span></span><span></span><span></span></div></div><div class="message-content" id="ai-typing"></div>';
+  messagePanel.appendChild(aiMsg);
+  await delay(500);
+  aiMsg.querySelector('.typing-indicator').remove();
+  var aiContent=document.getElementById('ai-typing');
+  await typewriterEffect(aiContent,'📝 任务分析完成\n\n我已经分析了这是一个正式的旨意请求，需要：\n\n1. 创建任务卡片 - 在看板上创建JJC-20250403-001任务\n2. 转交尚书省 - 将任务分派给尚书省执行审查\n\n正在创建任务...');
+  messageIndex++;
+  tlItem.classList.remove('active');
+  tlItem.classList.add('completed');
+  tlItem.querySelector('.timeline-status').className='timeline-status success';
+  tlItem.querySelector('.timeline-status').textContent='✅ 完成';
+  await delay(500);
+
+  // Step 2 - Tool call
+  currentStep=2;updateProgress(2);
+  tlItem=document.getElementById('timeline-2');
+  tlItem.querySelector('.timeline-time').textContent=formatTime();
+  tlItem.classList.add('active');
+  tlItem.querySelector('.timeline-status').className='timeline-status running';
+  tlItem.querySelector('.timeline-status').textContent='🔄 执行中';
+  var tool=demoSequence.tools[0];
+  var toolCard=document.createElement('div');
+  toolCard.className='tool-card';
+  toolCard.id='tool-0';
+  toolCard.innerHTML='<div class="tool-card-header" onclick="toggleTool(0)"><div class="tool-info"><div class="tool-icon '+tool.icon+'">⌨️</div><div><div class="tool-name">'+tool.name+'</div><div class="tool-type">'+tool.type+'</div></div></div><div class="tool-meta"><span class="tool-duration">'+tool.duration+'</span><div class="tool-status running"></div><span class="tool-expand">▼</span></div></div><div class="tool-card-body"><div class="tool-section"><div class="tool-section-title">Parameters</div><div class="tool-params">'+JSON.stringify(tool.params,null,2)+'</div></div><div class="tool-section"><div class="tool-section-title">Result</div><div class="tool-result">执行中...</div></div></div>';
+  toolsPanel.appendChild(toolCard);
+  await delay(800);
+  toolCard.querySelector('.tool-status').className='tool-status success';
+  toolCard.querySelector('.tool-result').textContent=JSON.stringify(tool.result,null,2);
+  toolIndex++;
+  tlItem.classList.remove('active');
+  tlItem.classList.add('completed');
+  tlItem.querySelector('.timeline-status').className='timeline-status success';
+  tlItem.querySelector('.timeline-status').textContent='✅ 完成';
+  await delay(400);
+
+  // Step 3
+  currentStep=3;updateProgress(3);
+  tlItem=document.getElementById('timeline-3');
+  tlItem.querySelector('.timeline-time').textContent=formatTime();
+  tlItem.classList.add('active');
+  tlItem.querySelector('.timeline-status').className='timeline-status running';
+  tlItem.querySelector('.timeline-status').textContent='🔄 执行中';
+  tool=demoSequence.tools[1];
+  toolCard=document.createElement('div');
+  toolCard.className='tool-card';
+  toolCard.id='tool-1';
+  toolCard.innerHTML='<div class="tool-card-header" onclick="toggleTool(1)"><div class="tool-info"><div class="tool-icon '+tool.icon+'">📄</div><div><div class="tool-name">'+tool.name+'</div><div class="tool-type">'+tool.type+'</div></div></div><div class="tool-meta"><span class="tool-duration">'+tool.duration+'</span><div class="tool-status running"></div><span class="tool-expand">▼</span></div></div><div class="tool-card-body"><div class="tool-section"><div class="tool-section-title">Parameters</div><div class="tool-params">'+JSON.stringify(tool.params,null,2)+'</div></div><div class="tool-section"><div class="tool-section-title">Result</div><div class="tool-result">执行中...</div></div></div>';
+  toolsPanel.appendChild(toolCard);
+  await delay(800);
+  toolCard.querySelector('.tool-status').className='tool-status success';
+  toolCard.querySelector('.tool-result').textContent=JSON.stringify(tool.result,null,2);
+  toolIndex++;
+  tlItem.classList.remove('active');
+  tlItem.classList.add('completed');
+  tlItem.querySelector('.timeline-status').className='timeline-status success';
+  tlItem.querySelector('.timeline-status').textContent='✅ 完成';
+  await delay(400);
+
+  // Step 4
+  currentStep=4;updateProgress(4);
+  tlItem=document.getElementById('timeline-4');
+  tlItem.querySelector('.timeline-time').textContent=formatTime();
+  tlItem.classList.add('active');
+  tlItem.querySelector('.timeline-status').className='timeline-status running';
+  tlItem.querySelector('.timeline-status').textContent='🔄 执行中';
+  tool=demoSequence.tools[2];
+  toolCard=document.createElement('div');
+  toolCard.className='tool-card';
+  toolCard.id='tool-2';
+  toolCard.innerHTML='<div class="tool-card-header" onclick="toggleTool(2)"><div class="tool-info"><div class="tool-icon '+tool.icon+'">💻</div><div><div class="tool-name">'+tool.name+'</div><div class="tool-type">'+tool.type+'</div></div></div><div class="tool-meta"><span class="tool-duration">'+tool.duration+'</span><div class="tool-status running"></div><span class="tool-expand">▼</span></div></div><div class="tool-card-body"><div class="tool-section"><div class="tool-section-title">Parameters</div><div class="tool-params">'+JSON.stringify(tool.params,null,2)+'</div></div><div class="tool-section"><div class="tool-section-title">Result</div><div class="tool-result">执行中...</div></div></div>';
+  toolsPanel.appendChild(toolCard);
+  await delay(600);
+  toolCard.querySelector('.tool-status').className='tool-status success';
+  toolCard.querySelector('.tool-result').textContent=JSON.stringify(tool.result,null,2);
+  toolIndex++;
+  tlItem.classList.remove('active');
+  tlItem.classList.add('completed');
+  tlItem.querySelector('.timeline-status').className='timeline-status success';
+  tlItem.querySelector('.timeline-status').textContent='✅ 完成';
+  await delay(500);
+
+  // Step 5 - Complete
+  currentStep=5;updateProgress(5);
+  tlItem=document.getElementById('timeline-5');
+  tlItem.querySelector('.timeline-time').textContent=formatTime();
+  tlItem.classList.add('active');
+  tlItem.querySelector('.timeline-status').className='timeline-status running';
+  tlItem.querySelector('.timeline-status').textContent='🔄 执行中';
+  await delay(1000);
+  tlItem.classList.remove('active');
+  tlItem.classList.add('completed');
+  tlItem.querySelector('.timeline-status').className='timeline-status success';
+  tlItem.querySelector('.timeline-status').textContent='✅ 完成';
+  clearInterval(statsInterval);
+  updateStats();
+  isRunning=false;
+  await delay(500);
+  restartOverlay.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  timelinePanel=document.getElementById('timeline-panel');
+  toolsPanel=document.getElementById('tools-panel');
+  messagePanel=document.getElementById('message-panel');
+  progressTracker=document.getElementById('progress-tracker');
+  statDuration=document.getElementById('stat-duration');
+  statTools=document.getElementById('stat-tools');
+  statSteps=document.getElementById('stat-steps');
+  statTokens=document.getElementById('stat-tokens');
+  restartOverlay=document.getElementById('restart-overlay');
+  document.getElementById('btn-restart').addEventListener('click',runDemo);
+  document.getElementById('btn-restart-overlay').addEventListener('click',runDemo);
+  document.getElementById('btn-speed').addEventListener('click',function(){
+    if(speed===1){speed=2;this.innerHTML='<span>⚡</span> Speed: 2x';}
+    else if(speed===2){speed=3;this.innerHTML='<span>⚡</span> Speed: 3x';}
+    else{speed=1;this.innerHTML='<span>⚡</span> Speed: 1x';}
+  });
+  setTimeout(runDemo,1000);
+});
+</script>
+</body>
+</html>
